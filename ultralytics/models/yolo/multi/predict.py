@@ -55,6 +55,8 @@ class MultiTaskPredictor(DetectionPredictor):
         for i, pred in enumerate(preds_nmsed):
             orig_img = orig_imgs[i]
             # scale boxes to original image size
+            import copy
+            pred_without_scale = copy.deepcopy(pred[:,:4])
             pred[:, :4] = ops.scale_boxes(img.shape[2:], pred[:, :4], orig_img.shape).round()
 
             # scale keypoints to original image size
@@ -71,7 +73,8 @@ class MultiTaskPredictor(DetectionPredictor):
                 if self.args.retina_masks:
                     masks = ops.process_mask_native(proto[i], masks, pred[:, :4], orig_img.shape[:2])  # HWC
                 else:
-                    masks = ops.process_mask(proto[i], masks, pred[:, :4], img.shape[2:], upsample=True)  # HWC
+                    # masks = ops.process_mask(proto[i], masks, pred[:, :4], img.shape[2:], upsample=True)  # HWC
+                    masks = ops.process_mask(proto[i], masks, pred_without_scale, img.shape[2:], upsample=True)  # HWC
 
             results.append(
                 Results(

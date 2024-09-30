@@ -132,10 +132,15 @@ class Pose(Detect):
     def kpts_decode(self, bs, kpts, anchors=None, strides=None):
         """Decodes keypoints."""
         # TODO: Can it be better?
+
         if anchors is None:
             anchors = self.anchors
+        elif anchors is not None:
+            self.anchors = anchors
         if strides is None:
             strides = self.strides
+        elif anchors is not None:
+            self.strides = strides
 
         ndim = self.kpt_shape[1]
         if self.export:  # required for TFLite export to avoid 'PLACEHOLDER_FOR_GREATER_OP_CODES' bug

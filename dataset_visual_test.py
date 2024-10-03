@@ -1,4 +1,5 @@
 from ultralytics.utils.plotting import Annotator, colors
+from ultralytics.data.utils import polygon2mask
 import numpy as np
 import cv2
 import os
@@ -12,7 +13,7 @@ sys.path.append(ROOT_DIR)
 def read_txt_file(file_path):
     try:
         with open(file_path, 'r') as file:
-            contents = file.read()
+            contents = file.readlines()
         return contents
     except FileNotFoundError:
         print(f"The file at {file_path} was not found.")
@@ -45,43 +46,87 @@ def kpts_conversion(kpts, dim):
     return kpts_new
 
 
-# image_name = "000000000785.jpg"
-# label_name = "000000000785.txt"
+def polygons_conversion(polygons, dim):
+    X = dim[0]
+    Y = dim[1]
+    polygons_new = np.zeros_like((polygons))
+    polygons_new[:, 0] = X * polygons[:, 0]
+    polygons_new[:, 1] = Y * polygons[:, 1]
+    return [polygons_new.reshape((1,-1))]
 
-# image_dir = "./datasets/coco-multi-person/images/val2017"
-# label_dir = "./datasets/coco-multi-person/labels/val2017"
 
-image_name = "Image_0.jpg"
-label_name = "Image_0.txt"
+def mask_visualization(mask, color, img):
+    mask = (mask * 255).astype(np.uint8)
+    colored_mask = np.zeros_like(img)
+    colored_mask[:, :] = color  # Green mask
+    colored_mask = cv2.bitwise_and(colored_mask, colored_mask, mask=mask * 255)
+    # mask_all +=colored_mask
+    img = cv2.addWeighted(img, 1.0, colored_mask, 0.3, 0)
+    return img
 
-image_dir = "./datasets/green_onion/images"
-label_dir = "./datasets/green_onion/labels"
+def main():
 
-img = cv2.imread(os.path.join(ROOT_DIR, image_dir, image_name))
-(Y, X, _) = img.shape
+    image_name = "Image_0.jpg"
+    label_name = "Image_0.txt"
 
-file_path = os.path.join(ROOT_DIR, label_dir, label_name)
-contents = read_txt_file(file_path)
-content_list = contents.split(" ")
-content_list = [float(value) for value in content_list]
-category = int(content_list[0])
+    image_dir = "./datasets/green_onion/images"
+    label_dir = "./datasets/green_onion/labels"
 
-annotator = Annotator(img, line_width=2)
+    img = cv2.imread(os.path.join(ROOT_DIR, image_dir, image_name))
+    (Y, X, _) = img.shape
 
-# # object detection visualization
-# box = content_list[1:5]
-# xyxy = box2xyxy(box, (X, Y))
-# annotator.box_label(xyxy, "human")
+    file_path = os.path.join(ROOT_DIR, label_dir, label_name)
+    contents = read_txt_file(file_path)
 
-# cv2.imshow("Image Window", annotator.im)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
+    annotator = Annotator(img, line_width=2)
 
-# keypoints visualization
-keypoints = content_list[5:5 + 17 * 3]
-keypoints = kpts_conversion(keypoints, (X, Y))
+    for i, content in enumerate(contents):
+        color = colors.palette[i % len(colors.palette)]
 
-annotator.kpts(keypoints, img.shape)
-cv2.imshow("Image Window", annotator.im)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+        content_list = content.replace('\n', ' ').split(" ")
+        content_list = [float(value) for value in content_list[:-1]]
+        category = int(content_list[0])
+
+        # # object detection visualization
+        box = content_list[1:5]
+        xyxy = box2xyxy(box, (X, Y))
+        annotator.box_label(xyxy, f"green onion{i}", color=color)
+
+        # keypoints visualization
+        keypoints = content_list[5:5 + 3 * 7]
+        keypoints = kpts_conversion(keypoints, (X, Y))
+        annotator.kpts(keypoints, img.shape)
+
+        # segmentation visualization
+        polygons = np.array(content_list[5 + 3 * 7:]).reshape((-1, 2))
+        polygons = polygons_conversion(polygons, (X, Y))
+        mask = polygon2mask((Y, X), polygons)
+        annotator.im = mask_visualization(mask, color, annotator.im)
+
+        cv2.imshow("Image Window", annotator.im)
+        cv2.waitKey(0)
+
+        # visiualize one instance
+        # break
+
+
+    cv2.destroyAllWindows()
+
+
+# def polygon2mask(imgsz, polygons, color=1, downsample_ratio=1):
+#     """
+#     Convert a list of polygons to a binary mask of the specified image size.
+
+#     Args:
+#         imgsz (tuple): The size of the image as (height, width).
+#         polygons (list[np.ndarray]): A list of polygons. Each polygon is an array with shape [N, M], where
+#                                      N is the number of polygons, and M is the number of points such that M % 2 = 0.
+#         color (int, optional): The color value to fill in the polygons on the mask. Defaults to 1.
+#         downsample_ratio (int, optional): Factor by which to downsample the mask. Defaults to 1.
+
+#     Returns:
+#         (np.ndarray): A binary mask of the specified image size with the polygons filled in.
+#     """
+#     pass
+if __name__ == "__main__":
+    main()

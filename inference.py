@@ -64,6 +64,7 @@ colors = [
 ]
 
 img = cv2.imread("./green_onion.jpg")
+
 # segmentation visualization
 mask_result = results[0].masks.data.cpu().detach().numpy()
 mask_result = size_interpolation(mask_result, img.shape)

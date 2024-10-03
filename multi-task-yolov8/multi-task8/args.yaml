@@ -1,10 +1,10 @@
 task: multi-task
 mode: train
-model: ultralytics/cfg/models/v8/yolov8n-multi.yaml
+model: ultralytics/cfg/models/v8/yolov8m-multi.yaml
 data: ultralytics/cfg/datasets/green-onion-multi.yaml
-epochs: 200
+epochs: 2
 patience: 50
-batch: 16
+batch: 8
 imgsz: 640
 save: true
 save_period: -1
